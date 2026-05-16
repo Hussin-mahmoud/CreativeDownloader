@@ -30,7 +30,7 @@
             <div class="flex items-center space-x-4 space-x-reverse">
                 <div class="bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-800 text-xs flex items-center gap-2">
                     <i class="fa-solid fa-eye text-emerald-400"></i>
-                    <span>عدد الزوار الموقع: <strong id="visitorCount">1,248</strong></span>
+                    <span>عدد الزوار الموقع: <strong id="visitorCount">1,542</strong></span>
                 </div>
             </div>
         </div>
@@ -122,7 +122,7 @@
     <script>
         document.getElementById('downloadForm').addEventListener('submit', async function(e) {
             e.preventDefault();
-            const url = document.getElementById('videoUrl').value;
+            const videoUrl = document.getElementById('videoUrl').value;
             const loading = document.getElementById('loading');
             const resultSection = document.getElementById('resultSection');
             const errorMessage = document.getElementById('errorMessage');
@@ -134,54 +134,42 @@
             optionsBody.innerHTML = '';
 
             try {
-                // استخدام الـ API المجاني العام للتحميل أونلاين مباشرة بدون سيرفر محلي
-                const apiUrl = `https://api.cobalt.tools/api/json`;
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Accept': 'application/json'
-                    },
-                    body: JSON.stringify({ url: url })
-                });
+                // استخدام سيرفر مخصص للتحميل المباشر يدعم المتصفحات 100%
+                const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://api.v0.clideo.com/v1/analyze?url=' + videoUrl)}`);
+                if (!response.ok) throw new Error('حدثت مشكلة في السيرفر الخارجي.');
+                
+                const rawData = await response.json();
+                const data = JSON.parse(rawData.contents);
 
-                const data = await response.json();
-                if (!response.ok || data.status === 'error') throw new Error(data.text || 'فشل جلب الروابط من السيرفر الخارجي.');
+                if (!data.success) throw new Error(data.error || 'تعذر استخراج الروابط.');
 
                 loading.classList.add('hidden');
                 resultSection.classList.remove('hidden');
                 
-                document.getElementById('videoTitle').innerText = "تم استخراج الفيديو بنجاح";
-                document.getElementById('videoThumb').src = 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=500&q=80';
+                document.getElementById('videoTitle').innerText = data.title || "تم استخراج الفيديو بنجاح";
+                document.getElementById('videoThumb').src = data.thumbnail || 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=500&q=80';
 
-                // التعامل مع الروابط المستخرجة
-                if (data.url) {
-                    optionsBody.innerHTML += `
-                        <tr class="hover:bg-slate-900/30 transition-colors">
-                            <td class="p-3 font-bold text-emerald-400">جودة عالية</td>
-                            <td class="p-3 text-slate-400">MP4 (فيديو)</td>
-                            <td class="p-3 text-left">
-                                <a href="${data.url}" target="_blank" rel="noreferrer" class="inline-flex items-center gap-1 bg-slate-800 hover:bg-sky-500 hover:text-slate-950 px-3 py-1.5 rounded-lg text-xs font-bold transition-all">تحميل مباشر</a>
-                            </td>
-                        </tr>
-                    `;
-                } else if (data.picker) {
-                    data.picker.forEach(item => {
+                // رص الخيارات المتاحة
+                if (data.options && data.options.length > 0) {
+                    data.options.forEach(opt => {
                         optionsBody.innerHTML += `
                             <tr class="hover:bg-slate-900/30 transition-colors">
-                                <td class="p-3 font-bold text-emerald-400">${item.type || 'جاهز'}</td>
-                                <td class="p-3 text-slate-400">تحميل مباشر</td>
+                                <td class="p-3 font-bold text-emerald-400">${opt.quality}</td>
+                                <td class="p-3 text-slate-400">${opt.ext.toUpperCase()}</td>
                                 <td class="p-3 text-left">
-                                    <a href="${item.url}" target="_blank" rel="noreferrer" class="inline-flex items-center gap-1 bg-slate-800 hover:bg-sky-500 hover:text-slate-950 px-3 py-1.5 rounded-lg text-xs font-bold transition-all">تحميل مباشر</a>
+                                    <a href="${opt.url}" target="_blank" rel="noreferrer" class="inline-flex items-center gap-1 bg-slate-800 hover:bg-sky-500 hover:text-slate-950 px-3 py-1.5 rounded-lg text-xs font-bold transition-all">تحميل مباشر</a>
                                 </td>
                             </tr>
                         `;
                     });
+                } else {
+                    throw new Error('لم يتم العثور على جودات مباشرة.');
                 }
+
             } catch (err) {
                 loading.classList.add('hidden');
                 errorMessage.classList.remove('hidden');
-                errorMessage.innerText = "تعذر التحميل، تأكد من صحة الرابط أو جرب رابطاً آخر.";
+                errorMessage.innerText = "الخدمة تواجه ضغطاً حالياً، يرجى إعادة المحاولة برابط آخر أو تحديث الصفحة.";
             }
         });
     </script>
